@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NTV Live PiP Fix
 // @namespace    https://news.ntv.co.jp/
-// @version      1.2.0
+// @version      1.3.0
 // @description  Keeps Picture-in-Picture active on the NTV live page in Safari-compatible players.
 // @match        https://news.ntv.co.jp/live*
 // @run-at       document-idle
@@ -14,6 +14,7 @@
   const nativePause = HTMLMediaElement.prototype.pause;
   const nativePlay = HTMLMediaElement.prototype.play;
   const nativeSetPresentationMode = HTMLVideoElement.prototype.webkitSetPresentationMode;
+  const nativeExitPictureInPicture = Document.prototype.exitPictureInPicture;
   const nativeDocHidden = Object.getOwnPropertyDescriptor(Document.prototype, "hidden");
   const nativeDocVisibility = Object.getOwnPropertyDescriptor(Document.prototype, "visibilityState");
   const state = { lockedVideo: null, graceUntil: 0 };
@@ -64,6 +65,15 @@
       }
 
       return nativeSetPresentationMode.apply(this, arguments);
+    };
+  }
+
+  if (nativeExitPictureInPicture) {
+    Document.prototype.exitPictureInPicture = function () {
+      if (hasProtectedVideo()) {
+        return Promise.resolve();
+      }
+      return nativeExitPictureInPicture.apply(this, arguments);
     };
   }
 
