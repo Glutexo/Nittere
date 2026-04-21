@@ -48,3 +48,7 @@ osascript scripts/ntv-live-pip-fix.scpt
 ```
 
 If the page reloads, run the AppleScript again.
+
+## License
+
+This project is dedicated to the public domain under CC0 1.0 Universal. See `LICENSE`.
