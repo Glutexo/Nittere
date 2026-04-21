@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NTV Live PiP Fix
 // @namespace    https://news.ntv.co.jp/
-// @version      1.1.0
+// @version      1.2.0
 // @description  Keeps Picture-in-Picture active on the NTV live page in Safari-compatible players.
 // @match        https://news.ntv.co.jp/live*
 // @run-at       document-idle
@@ -14,7 +14,9 @@
   const nativePause = HTMLMediaElement.prototype.pause;
   const nativePlay = HTMLMediaElement.prototype.play;
   const nativeSetPresentationMode = HTMLVideoElement.prototype.webkitSetPresentationMode;
-  const state = { lockedVideo: null, graceUntil: 0, lastPiPAt: 0 };
+  const nativeDocHidden = Object.getOwnPropertyDescriptor(Document.prototype, "hidden");
+  const nativeDocVisibility = Object.getOwnPropertyDescriptor(Document.prototype, "visibilityState");
+  const state = { lockedVideo: null, graceUntil: 0 };
   const now = () => Date.now();
 
   const isPiP = (video) =>
@@ -24,6 +26,8 @@
 
   const isProtected = (video) =>
     !!video && (isPiP(video) || (video === state.lockedVideo && now() < state.graceUntil));
+
+  const hasProtectedVideo = () => isProtected(state.lockedVideo);
 
   function tryResume(video) {
     if (!video) return;
@@ -37,8 +41,7 @@
 
   function arm(video) {
     state.lockedVideo = video;
-    state.lastPiPAt = now();
-    state.graceUntil = state.lastPiPAt + 5000;
+    state.graceUntil = now() + 8000;
     tryResume(video);
   }
 
@@ -63,6 +66,41 @@
       return nativeSetPresentationMode.apply(this, arguments);
     };
   }
+
+  function swallowEvent(event) {
+    if (!hasProtectedVideo()) return;
+    if (["visibilitychange", "pagehide", "blur", "freeze"].includes(event.type)) {
+      event.stopImmediatePropagation();
+      event.stopPropagation();
+    }
+  }
+
+  ["visibilitychange", "pagehide", "blur", "freeze"].forEach((type) => {
+    window.addEventListener(type, swallowEvent, true);
+    document.addEventListener(type, swallowEvent, true);
+  });
+
+  try {
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get() {
+        if (hasProtectedVideo()) return false;
+        return nativeDocHidden && nativeDocHidden.get ? nativeDocHidden.get.call(document) : false;
+      },
+    });
+  } catch (error) {}
+
+  try {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get() {
+        if (hasProtectedVideo()) return "visible";
+        return nativeDocVisibility && nativeDocVisibility.get
+          ? nativeDocVisibility.get.call(document)
+          : "visible";
+      },
+    });
+  } catch (error) {}
 
   function bind(video) {
     if (!video || video.__ntvPiPFixBound) return;

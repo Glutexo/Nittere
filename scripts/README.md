@@ -8,9 +8,9 @@ This folder contains two ways to keep Picture-in-Picture active on `https://news
 - `ntv-live-pip-fix.applescript` - AppleScript source that injects the runtime patch into the current Safari tab.
 - `ntv-live-pip-fix.scpt` - compiled AppleScript version of the same Safari helper.
 
-## What changed in version 1.1
+## What changed in version 1.2
 
-The fix now blocks forced switches from PiP back to inline mode for a short protection window after PiP starts. This targets the newer behavior where PiP keeps reopening and immediately collapses back into the page.
+The fix now also masks `visibilitychange`, `pagehide`, `blur`, and `freeze` signals while PiP is active. This targets players that immediately tear down PiP because they think the page lost foreground state.
 
 ## Userscript
 
