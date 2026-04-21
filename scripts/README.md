@@ -8,6 +8,7 @@ This folder contains the workaround scripts for `https://news.ntv.co.jp/live`.
 - `ntv-live-pip-fix.applescript` - AppleScript source for the workaround.
 - `ntv-live-pip-fix.scpt` - compiled AppleScript workaround.
 - `ntv-live-pip-fix.inject.js` - injected JavaScript payload used by the AppleScript workaround.
+- `run-ntv-live-pip-fix.command` - double-click launcher for the compiled AppleScript workaround.
 
 ## What changed in version 1.3
 
@@ -27,7 +28,7 @@ The script runs automatically on matching live page URLs.
 Use this when you want a manual one-shot fix for the current Safari tab.
 
 1. Open `https://news.ntv.co.jp/live` in Safari.
-2. Run `ntv-live-pip-fix.scpt` from this folder with Script Editor, Script Menu, or `osascript`.
+2. Run `ntv-live-pip-fix.scpt` from this folder with Script Editor, Script Menu, `osascript`, or double-click `run-ntv-live-pip-fix.command`.
 3. Start playback and enter Picture-in-Picture.
 
 Example:
