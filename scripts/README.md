@@ -7,16 +7,18 @@ This folder contains both workaround and diagnostic scripts for `https://news.nt
 - `ntv-live-pip-fix.user.js` - userscript workaround.
 - `ntv-live-pip-fix.applescript` - AppleScript source for the workaround.
 - `ntv-live-pip-fix.scpt` - compiled AppleScript workaround.
+- `ntv-live-pip-fix.inject.js` - injected JavaScript payload used by the AppleScript workaround.
 - `ntv-live-pip-diagnostic.user.js` - userscript logger for PiP teardown analysis.
 - `ntv-live-pip-diagnostic.applescript` - AppleScript source for the diagnostic logger.
 - `ntv-live-pip-diagnostic.scpt` - compiled AppleScript diagnostic logger.
+- `ntv-live-pip-diagnostic.inject.js` - injected JavaScript payload used by the AppleScript diagnostic logger.
 
 ## Diagnostic mode
 
 Use the diagnostic variant when PiP still immediately falls back into the page.
 
 1. Open a fresh `https://news.ntv.co.jp/live` tab.
-2. Run `ntv-live-pip-diagnostic.scpt` or enable `ntv-live-pip-diagnostic.user.js`.
+2. Run `ntv-live-pip-diagnostic.scpt` from this folder or enable `ntv-live-pip-diagnostic.user.js`.
 3. Start playback.
 4. Enter Picture-in-Picture and wait for the failure.
 5. Export the collected log from the page.
