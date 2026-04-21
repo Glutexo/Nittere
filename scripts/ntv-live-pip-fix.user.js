@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         NTV Live PiP Fix
 // @namespace    https://news.ntv.co.jp/
-// @version      1.0.0
-// @description  Keeps Picture-in-Picture alive on the NTV live page in Safari-compatible players.
+// @version      1.1.0
+// @description  Keeps Picture-in-Picture active on the NTV live page in Safari-compatible players.
 // @match        https://news.ntv.co.jp/live*
 // @run-at       document-idle
 // ==/UserScript==
@@ -13,23 +13,17 @@
 
   const nativePause = HTMLMediaElement.prototype.pause;
   const nativePlay = HTMLMediaElement.prototype.play;
-  const nativeRequestPiP = HTMLVideoElement.prototype.requestPictureInPicture;
-  const state = { lockedVideo: null, graceUntil: 0 };
+  const nativeSetPresentationMode = HTMLVideoElement.prototype.webkitSetPresentationMode;
+  const state = { lockedVideo: null, graceUntil: 0, lastPiPAt: 0 };
   const now = () => Date.now();
+
   const isPiP = (video) =>
     !!video &&
     (document.pictureInPictureElement === video ||
       video.webkitPresentationMode === "picture-in-picture");
 
-  HTMLMediaElement.prototype.pause = function () {
-    if (
-      this instanceof HTMLVideoElement &&
-      (isPiP(this) || (this === state.lockedVideo && now() < state.graceUntil))
-    ) {
-      return Promise.resolve();
-    }
-    return nativePause.apply(this, arguments);
-  };
+  const isProtected = (video) =>
+    !!video && (isPiP(video) || (video === state.lockedVideo && now() < state.graceUntil));
 
   function tryResume(video) {
     if (!video) return;
@@ -41,26 +35,33 @@
     } catch (error) {}
   }
 
-  async function tryReenter(video) {
-    if (!video || !document.contains(video)) return;
-
+  function arm(video) {
+    state.lockedVideo = video;
+    state.lastPiPAt = now();
+    state.graceUntil = state.lastPiPAt + 5000;
     tryResume(video);
+  }
 
-    try {
-      if (
-        video.webkitSupportsPresentationMode &&
-        video.webkitSupportsPresentationMode("picture-in-picture")
-      ) {
-        video.webkitSetPresentationMode("picture-in-picture");
-        return;
-      }
-    } catch (error) {}
+  HTMLMediaElement.prototype.pause = function () {
+    if (this instanceof HTMLVideoElement && isProtected(this)) {
+      return Promise.resolve();
+    }
+    return nativePause.apply(this, arguments);
+  };
 
-    try {
-      if (nativeRequestPiP) {
-        await nativeRequestPiP.call(video);
+  if (nativeSetPresentationMode) {
+    HTMLVideoElement.prototype.webkitSetPresentationMode = function (mode) {
+      if (mode === "picture-in-picture") {
+        arm(this);
+        return nativeSetPresentationMode.apply(this, arguments);
       }
-    } catch (error) {}
+
+      if (mode === "inline" && isProtected(this)) {
+        return this.webkitPresentationMode || "picture-in-picture";
+      }
+
+      return nativeSetPresentationMode.apply(this, arguments);
+    };
   }
 
   function bind(video) {
@@ -70,32 +71,23 @@
     video.disablePictureInPicture = false;
     video.playsInline = true;
 
-    const arm = () => {
-      state.lockedVideo = video;
-      state.graceUntil = now() + 4000;
-      tryResume(video);
-    };
-
     video.addEventListener(
       "webkitpresentationmodechanged",
       () => {
         if (video.webkitPresentationMode === "picture-in-picture") {
-          arm();
-          return;
-        }
-        if (state.lockedVideo === video && now() < state.graceUntil) {
-          setTimeout(() => tryReenter(video), 80);
+          arm(video);
         }
       },
       true
     );
 
-    video.addEventListener("enterpictureinpicture", arm, true);
+    video.addEventListener("enterpictureinpicture", () => arm(video), true);
+
     video.addEventListener(
       "leavepictureinpicture",
       () => {
-        if (state.lockedVideo === video && now() < state.graceUntil) {
-          setTimeout(() => tryReenter(video), 80);
+        if (isProtected(video)) {
+          setTimeout(() => tryResume(video), 0);
         }
       },
       true
@@ -104,7 +96,7 @@
     video.addEventListener(
       "pause",
       () => {
-        if (isPiP(video) || now() < state.graceUntil) {
+        if (isProtected(video)) {
           setTimeout(() => tryResume(video), 0);
         }
       },
