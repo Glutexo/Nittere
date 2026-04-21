@@ -1,38 +1,46 @@
 # NTV Live PiP Fix
 
-This folder contains two ways to keep Picture-in-Picture active on `https://news.ntv.co.jp/live`.
+This folder contains both workaround and diagnostic scripts for `https://news.ntv.co.jp/live`.
 
 ## Files
 
-- `ntv-live-pip-fix.user.js` - userscript for Tampermonkey, Userscripts, or a similar extension.
-- `ntv-live-pip-fix.applescript` - AppleScript source that injects the runtime patch into the current Safari tab.
-- `ntv-live-pip-fix.scpt` - compiled AppleScript version of the same Safari helper.
+- `ntv-live-pip-fix.user.js` - userscript workaround.
+- `ntv-live-pip-fix.applescript` - AppleScript source for the workaround.
+- `ntv-live-pip-fix.scpt` - compiled AppleScript workaround.
+- `ntv-live-pip-diagnostic.user.js` - userscript logger for PiP teardown analysis.
+- `ntv-live-pip-diagnostic.applescript` - AppleScript source for the diagnostic logger.
+- `ntv-live-pip-diagnostic.scpt` - compiled AppleScript diagnostic logger.
 
-## What changed in version 1.2
+## Diagnostic mode
 
-The fix now also masks `visibilitychange`, `pagehide`, `blur`, and `freeze` signals while PiP is active. This targets players that immediately tear down PiP because they think the page lost foreground state.
+Use the diagnostic variant when PiP still immediately falls back into the page.
 
-## Userscript
+1. Open a fresh `https://news.ntv.co.jp/live` tab.
+2. Run `ntv-live-pip-diagnostic.scpt` or enable `ntv-live-pip-diagnostic.user.js`.
+3. Start playback.
+4. Enter Picture-in-Picture and wait for the failure.
+5. Export the collected log from the page.
 
-1. Install a userscript manager in Safari.
-2. Import `ntv-live-pip-fix.user.js`.
-3. Open `https://news.ntv.co.jp/live`.
-4. Start the stream and enter Picture-in-Picture.
+### Export from Safari
 
-The script runs automatically on matching live page URLs.
+Run this in Script Editor:
 
-## AppleScript
-
-Use this when you want a manual one-shot fix for the current Safari tab.
-
-1. Open `https://news.ntv.co.jp/live` in Safari.
-2. Run `ntv-live-pip-fix.scpt` with Script Editor, Script Menu, or `osascript`.
-3. Start playback and enter Picture-in-Picture.
-
-Example:
-
-```sh
-osascript scripts/ntv-live-pip-fix.scpt
+```applescript
+tell application "Safari"
+  do JavaScript "window.__ntvPiPDiagExport ? window.__ntvPiPDiagExport() : 'diagnostic log missing'" in current tab of front window
+end tell
 ```
 
-If the page reloads, run the AppleScript again.
+### Export from Web Inspector
+
+```js
+window.__ntvPiPDiagExport()
+```
+
+The diagnostic log captures:
+
+- media `play()` / `pause()` calls with short stack traces
+- `webkitSetPresentationMode()` and PiP API calls
+- PiP enter/leave and media lifecycle events
+- `visibilitychange`, `pagehide`, `blur`, `freeze`, and related page events
+- video node insertion and removal in the DOM
